@@ -23,3 +23,17 @@ CREATE TABLE consultas_rag (
 -- Índice para consultas recientes
 CREATE INDEX idx_consultas_timestamp 
 ON consultas_rag(timestamp DESC);
+
+-- Tabla 3: Historial del Chatbot Multiherramienta
+CREATE TABLE conversaciones (
+  id SERIAL PRIMARY KEY,
+  mensaje_usuario TEXT NOT NULL,
+  intencion_detectada VARCHAR(50),
+  herramienta_usada VARCHAR(50),
+  respuesta_bot TEXT NOT NULL,
+  timestamp TIMESTAMP DEFAULT NOW()
+);
+
+-- Índice para historial reciente del chatbot
+CREATE INDEX idx_conversaciones_timestamp
+ON conversaciones(timestamp DESC);

@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: hit_postgres
     restart: unless-stopped
     environment:
@@ -46,6 +44,8 @@ services:
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-n8n_password}
       - N8N_DIAGNOSTICS_ENABLED=false
       - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_DEFAULT_ALLOW_INTERNAL_REQUESTS=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     ports:
       - "5678:5678"
     volumes:

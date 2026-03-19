@@ -1,0 +1,404 @@
+{
+  "name": "Chatbot Multiherramienta",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook Chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [-800, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/generate",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "model": "mistral",
+          "stream": false,
+          "prompt": "={{ 'Eres un clasificador de intenciones. Analiza el siguiente mensaje del usuario y responde ÚNICAMENTE con una de estas palabras (sin comillas ni explicaciones): clima, pais, wikipedia, chiste, general.\\n\\nMensaje: ' + $json.body.mensaje }}"
+        },
+        "options": {}
+      },
+      "name": "Ollama Analiza Intención",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "intencion",
+              "value": "={{ $json.response.trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "mensaje_usuario",
+              "value": "={{ $('Webhook Chat').item.json.body.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Extraer Intención",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-200, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "value": "clima"
+            },
+            {
+              "value": "pais"
+            },
+            {
+              "value": "wikipedia"
+            },
+            {
+              "value": "chiste"
+            }
+          ]
+        },
+        "dataType": "string",
+        "value1": "={{ $json.intencion }}",
+        "fallbackOutput": "extra"
+      },
+      "name": "Switch Herramienta",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.open-meteo.com/v1/forecast?latitude=40.4168&longitude=-3.7038&current=temperature_2m,wind_speed_10m,weather_code&timezone=Europe/Madrid",
+        "options": {}
+      },
+      "name": "API Clima",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, -400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://restcountries.com/v3.1/name/{{ encodeURIComponent($('Extraer Intención').item.json.mensaje_usuario.replace(/.*(?:sobre|de|del país|país|info)\s+/i, '').split(' ')[0]) }}?fields=name,capital,population,region,languages,currencies",
+        "options": {}
+      },
+      "name": "API Países",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, -200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://es.wikipedia.org/api/rest_v1/page/summary/{{ encodeURIComponent($('Extraer Intención').item.json.mensaje_usuario.replace(/.*(?:sobre|acerca de|qué es|quién es)\s+/i, '').trim()) }}",
+        "options": {}
+      },
+      "name": "API Wikipedia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://v2.jokeapi.dev/joke/Programming,Misc?lang=es&type=single",
+        "options": {}
+      },
+      "name": "API Chistes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [200, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "datos_api",
+              "value": "Responde directamente como asistente conversacional en español.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Respuesta General",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "datos_api",
+              "value": "={{ 'Temperatura actual: ' + $json.current.temperature_2m + '°C, viento: ' + $json.current.wind_speed_10m + ' km/h' }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "herramienta",
+              "value": "clima",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Procesar Clima",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, -400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "datos_api",
+              "value": "={{ 'País: ' + $json[0].name.common + ', Capital: ' + $json[0].capital[0] + ', Población: ' + $json[0].population + ', Región: ' + $json[0].region }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "herramienta",
+              "value": "pais",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Procesar País",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, -200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "datos_api",
+              "value": "={{ $json.extract || $json.description }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "herramienta",
+              "value": "wikipedia",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Procesar Wikipedia",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "datos_api",
+              "value": "={{ $json.joke || ($json.setup + ' ... ' + $json.delivery) }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "herramienta",
+              "value": "chiste",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Procesar Chiste",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "herramienta",
+              "value": "general",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Procesar General",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "chooseBranch": {
+          "rules": {
+            "rules": [
+              { "outputKey": "0" },
+              { "outputKey": "1" },
+              { "outputKey": "2" },
+              { "outputKey": "3" },
+              { "outputKey": "4" }
+            ]
+          }
+        }
+      },
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [600, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/generate",
+        "sendBody": true,
+        "contentType": "json",
+        "body": {
+          "model": "mistral",
+          "stream": false,
+          "prompt": "={{ 'Eres un asistente conversacional amigable. El usuario preguntó: \"' + $('Extraer Intención').item.json.mensaje_usuario + '\". Aquí tienes la información relevante: ' + $json.datos_api + '. Responde de forma natural, clara y en español en 2-3 frases máximo.' }}"
+        },
+        "options": {}
+      },
+      "name": "Ollama Genera Respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [800, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversaciones (mensaje_usuario, intencion_detectada, herramienta_usada, respuesta_bot) VALUES ($1, $2, $3, $4);",
+        "options": {
+          "queryReplacement": "={{ [$('Extraer Intención').item.json.mensaje_usuario, $('Extraer Intención').item.json.intencion, $json.datos_api !== undefined ? $json.herramienta : 'general', $json.response] }}"
+        }
+      },
+      "name": "Guardar Conversación",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.2,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "respuesta",
+              "value": "={{ $('Ollama Genera Respuesta').item.json.response }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "herramienta_usada",
+              "value": "={{ $('Extraer Intención').item.json.intencion }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Respuesta Final",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1200, 0]
+    }
+  ],
+  "connections": {
+    "Webhook Chat": {
+      "main": [[{ "node": "Ollama Analiza Intención", "type": "main", "index": 0 }]]
+    },
+    "Ollama Analiza Intención": {
+      "main": [[{ "node": "Extraer Intención", "type": "main", "index": 0 }]]
+    },
+    "Extraer Intención": {
+      "main": [[{ "node": "Switch Herramienta", "type": "main", "index": 0 }]]
+    },
+    "Switch Herramienta": {
+      "main": [
+        [{ "node": "API Clima", "type": "main", "index": 0 }],
+        [{ "node": "API Países", "type": "main", "index": 0 }],
+        [{ "node": "API Wikipedia", "type": "main", "index": 0 }],
+        [{ "node": "API Chistes", "type": "main", "index": 0 }],
+        [{ "node": "Respuesta General", "type": "main", "index": 0 }]
+      ]
+    },
+    "API Clima": {
+      "main": [[{ "node": "Procesar Clima", "type": "main", "index": 0 }]]
+    },
+    "API Países": {
+      "main": [[{ "node": "Procesar País", "type": "main", "index": 0 }]]
+    },
+    "API Wikipedia": {
+      "main": [[{ "node": "Procesar Wikipedia", "type": "main", "index": 0 }]]
+    },
+    "API Chistes": {
+      "main": [[{ "node": "Procesar Chiste", "type": "main", "index": 0 }]]
+    },
+    "Respuesta General": {
+      "main": [[{ "node": "Procesar General", "type": "main", "index": 0 }]]
+    },
+    "Procesar Clima": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 0 }]]
+    },
+    "Procesar País": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 1 }]]
+    },
+    "Procesar Wikipedia": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 2 }]]
+    },
+    "Procesar Chiste": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 3 }]]
+    },
+    "Procesar General": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 4 }]]
+    },
+    "Merge": {
+      "main": [[{ "node": "Ollama Genera Respuesta", "type": "main", "index": 0 }]]
+    },
+    "Ollama Genera Respuesta": {
+      "main": [[{ "node": "Guardar Conversación", "type": "main", "index": 0 }]]
+    },
+    "Guardar Conversación": {
+      "main": [[{ "node": "Respuesta Final", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}
