@@ -56,7 +56,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO logs_consultas (pregunta, respuesta) VALUES ($1, $2);",
+        "query": "INSERT INTO consultas_rag (pregunta, respuesta, documentos_usados) VALUES ($1, $2, string_to_array($3, ','));",
         "options": {}
       },
       "id": "6",

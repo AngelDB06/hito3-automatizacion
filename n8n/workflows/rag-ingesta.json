@@ -47,8 +47,8 @@
     },
     {
       "parameters": {
-        "chunkSize": 1000,
-        "chunkOverlap": 100
+        "chunkSize": 500,
+        "chunkOverlap": 50
       },
       "id": "5",
       "name": "Character Text Splitter",
@@ -59,7 +59,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO metadata (filename, metadata) VALUES ($1, $2);",
+        "query": "INSERT INTO documentos (nombre, ruta_archivo, num_chunks) VALUES ($1, $2, $3);",
         "options": {}
       },
       "id": "6",
